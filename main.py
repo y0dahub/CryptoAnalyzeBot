@@ -2,7 +2,7 @@ from aiogram import Bot, Dispatcher
 
 from asyncio import run
 
-from handlers import user_commads, user_messages, curr
+from handlers import user_commads, curr
 from config import TOKEN
 
 async def main():
@@ -13,7 +13,6 @@ async def main():
 
     dp.include_routers(
         user_commads.router,
-        user_messages.router,
         curr.router
     )
 

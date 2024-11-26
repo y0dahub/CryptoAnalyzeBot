@@ -13,7 +13,6 @@ class Database:
         self.users = self.db.get_collection(name="users")
         self.tasks = self.db.get_collection(name="tasks")
 
-
     async def add_user(self, user_id):
         insert_query_users = {
             "uuid": user_id
@@ -24,12 +23,17 @@ class Database:
             "tasks": []
         }
         try:
-            await self.users.insert_one(document=insert_query_users)
-            await self.tasks.insert_one(document=insert_query_tasks)
-            return True
-        except DuplicateKeyError:
-            return False
+            user_exists = await self.users.find_one({"uuid": user_id})
+            if not user_exists:
+                await self.users.insert_one(document=insert_query_users)
 
+            tasks_exists = await self.tasks.find_one({"uuid": user_id})
+            if not tasks_exists:
+                await self.tasks.insert_one(document=insert_query_tasks)
+
+            return True
+        except Exception as e:
+            raise e
 
     async def add_task(self, user_id, currency_pair, condition):
         task_id = str(ObjectId())
@@ -78,10 +82,9 @@ class Database:
     async def complete_task(self, user_id, task_id):
         try:
             result = await self.tasks.update_one(
-                filter={"uuid": user_id, "task_id": task_id},
-                update={"$set": {"status": "completed"}}
+                filter={"uuid": user_id, "tasks.task_id": task_id},
+                update={"$set": {"tasks.$.status": "completed"}}
             )
             return result.modified_count > 0
         except Exception as e:
             raise e
-            return False

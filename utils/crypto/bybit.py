@@ -32,3 +32,11 @@ class BybitApi:
                 symbols = [currency.get('symbol') for currency in list1 if currency.get('symbol') in popular_currencies]
 
                 return symbols
+
+# async def main():
+#     bb = BybitApi()
+#
+#     res = await bb.get_cost(symbol="BTCUSDT")
+#     print(res)
+#
+# asyncio.run(main())
