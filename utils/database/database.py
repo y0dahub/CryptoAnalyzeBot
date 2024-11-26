@@ -5,7 +5,7 @@ from bson import ObjectId
 import asyncio
 
 class Database:
-    def __init__(self, host):
+    def __init__(self, host: str):
         self.host = host
         self.connection = AsyncIOMotorClient(host=self.host)
 
@@ -31,31 +31,22 @@ class Database:
             return False
 
 
-    async def add_task(self, user_id, task_name):
+    async def add_task(self, user_id, currency_pair, condition):
         task_id = str(ObjectId())
         task = {
             "task_id": task_id,
-            "task_name": task_name
+            "currency_pair": currency_pair,
+            "condition": condition,
+            "status": "pending"
         }
 
         try:
-            await self.tasks.find_one_and_update(
+            await self.tasks.update_one(
                 filter={"uuid": user_id},
                 update={"$push": {"tasks": task}},
-                return_document=True
+                upsert=True
             )
-            return True
-        except Exception as e:
-            raise e
-            return False
-
-    async def remove_task(self, user_id, task_id):
-        try:
-            result = await self.tasks.find_one_and_delete(
-                filter={"uuid": user_id},
-                projection={"task_id": task_id}
-            )
-            return True
+            return task_id
         except Exception as e:
             raise e
             return False
@@ -65,7 +56,7 @@ class Database:
             result = await self.tasks.find_one(filter={"uuid": user_id, "tasks.task_id": task_id})
             if result:
                 task = next((task for task in result['tasks'] if task['task_id'] == task_id), None)
-                return task.get("task_name")
+                return task
             
             return False
         except Exception as e:
@@ -74,20 +65,23 @@ class Database:
     
     async def get_all_tasks(self, user_id):
         try:
-            cursor = self.tasks.find(filter={
-                "uuid": user_id
-            })
+            result = await self.tasks.find_one(filter={"uuid": user_id})
 
-            tasks = await cursor.to_list(length=None)
-            
-            return tasks
-            
+            if result:
+                return result.get("tasks", [])
+
+            return False
         except Exception as e:
             raise e
+            return False
 
-async def main():
-    db = Database(host="mongodb://localhost:27017")
-    print(await db.get_task(user_id=123, task_id="67447e0c522188299719823c"))
-    print(await db.get_all_tasks(user_id=123))
-
-asyncio.run(main())
+    async def complete_task(self, user_id, task_id):
+        try:
+            result = await self.tasks.update_one(
+                filter={"uuid": user_id, "task_id": task_id},
+                update={"$set": {"status": "completed"}}
+            )
+            return result.modified_count > 0
+        except Exception as e:
+            raise e
+            return False
